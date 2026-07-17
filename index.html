@@ -176,6 +176,69 @@
     justify-content: space-between; align-items: center; cursor: pointer;
     padding: 0; font-size: 14px; font-weight: bold; color: #5f6b4f; font-family: inherit;
   }
+  /* ===== ロック画面 ===== */
+  #lockScreen {
+    position: fixed; inset: 0; background: #ffffff; z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.4s ease;
+  }
+  #padArea { display: none; text-align: center; }
+  #padArea.show { display: block; }
+  .dots { display: flex; justify-content: center; gap: 16px; margin-bottom: 28px; }
+  .dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 1.5px solid #999; background: transparent;
+  }
+  .dot.fill { background: #333; border-color: #333; }
+  .pad-grid {
+    display: grid; grid-template-columns: repeat(3, 72px); gap: 14px;
+    justify-content: center;
+  }
+  .pad-btn {
+    width: 72px; height: 72px; border-radius: 50%;
+    border: 1px solid #ddd; background: #fff; color: #333;
+    font-size: 26px; cursor: pointer; font-family: inherit;
+  }
+  .pad-btn:active { background: #f0f0f0; }
+  .pad-btn.blank { border: none; background: transparent; }
+  .pad-del { font-size: 18px; color: #999; }
+  .shake { animation: shake 0.4s; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-10px); }
+    40% { transform: translateX(10px); }
+    60% { transform: translateX(-8px); }
+    80% { transform: translateX(8px); }
+  }
+  /* ===== カレンダー ===== */
+  .cal-nav {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .cal-nav button {
+    border: 1px solid #e5dcc9; background: #faf6ee; color: #6d6353;
+    border-radius: 10px; padding: 6px 14px; font-size: 15px; cursor: pointer;
+    font-family: inherit;
+  }
+  .cal-title { font-size: 14px; font-weight: bold; color: #5f6b4f; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-wd { text-align: center; font-size: 10px; color: #b0a48f; padding: 2px 0; }
+  .cal-cell {
+    min-height: 46px; border-radius: 10px; background: #faf6ee;
+    border: 1.5px solid transparent; cursor: pointer; padding: 3px 2px;
+    display: flex; flex-direction: column; align-items: center;
+    font-family: inherit;
+  }
+  .cal-cell.empty { background: transparent; cursor: default; }
+  .cal-cell.today { background: #eef2e6; }
+  .cal-cell.selected { border-color: #7a9b6d; }
+  .cal-num { font-size: 11px; color: #6d6353; line-height: 1.2; }
+  .cal-cell.today .cal-num { color: #7a9b6d; font-weight: bold; }
+  .cal-icons { font-size: 9px; line-height: 1.3; letter-spacing: -1px; word-break: break-all; text-align: center; }
+  .cal-detail {
+    margin-top: 10px; background: #faf6ee; border-radius: 12px;
+    padding: 12px; font-size: 13px; line-height: 1.9;
+  }
 </style>
 </head>
 <body>
@@ -191,9 +254,65 @@
 <div class="tabbar" id="tabbar"></div>
 <div id="toast"></div>
 
+<div id="lockScreen">
+  <div id="padArea">
+    <div class="dots" id="dots">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <div class="pad-grid">
+      <button class="pad-btn" onclick="padInput('1')">1</button>
+      <button class="pad-btn" onclick="padInput('2')">2</button>
+      <button class="pad-btn" onclick="padInput('3')">3</button>
+      <button class="pad-btn" onclick="padInput('4')">4</button>
+      <button class="pad-btn" onclick="padInput('5')">5</button>
+      <button class="pad-btn" onclick="padInput('6')">6</button>
+      <button class="pad-btn" onclick="padInput('7')">7</button>
+      <button class="pad-btn" onclick="padInput('8')">8</button>
+      <button class="pad-btn" onclick="padInput('9')">9</button>
+      <button class="pad-btn blank" disabled></button>
+      <button class="pad-btn" onclick="padInput('0')">0</button>
+      <button class="pad-btn blank pad-del" onclick="padDelete()">⌫</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ================= 定数 =================
 const STORAGE_KEY = "ayumi-kanri-data";
+const PASSCODE = "0621";
+
+// ================= ロック画面 =================
+let padValue = "";
+function padInput(n) {
+  if (padValue.length >= 4) return;
+  padValue += n;
+  updateDots();
+  if (padValue.length === 4) {
+    if (padValue === PASSCODE) {
+      const ls = document.getElementById("lockScreen");
+      ls.style.opacity = "0";
+      setTimeout(() => { ls.style.display = "none"; }, 400);
+    } else {
+      const d = document.getElementById("dots");
+      d.classList.add("shake");
+      setTimeout(() => {
+        d.classList.remove("shake");
+        padValue = "";
+        updateDots();
+      }, 400);
+    }
+  }
+}
+function padDelete() {
+  padValue = padValue.slice(0, -1);
+  updateDots();
+}
+function updateDots() {
+  const dots = document.querySelectorAll("#dots .dot");
+  dots.forEach((el, i) => {
+    el.className = "dot" + (i < padValue.length ? " fill" : "");
+  });
+}
 
 const DEFAULT_CHORES = [
   { id: "bath", name: "お風呂掃除", emoji: "🛁", frequencyDays: 1, lastDone: null },
@@ -266,6 +385,7 @@ let state = {
   fridgeItems: [],
   shoppingList: [],
   history: {},
+  dayLog: {},
   menuHistory: [],
   todayMenu: null,
   menuMessages: [],
@@ -274,6 +394,10 @@ let state = {
 };
 let tab = "today";
 let mood = "omakase";
+const _now = new Date();
+let calYear = _now.getFullYear();
+let calMonth = _now.getMonth();
+let selectedCalDate = null;
 let menuLoading = false;
 let menuError = null;
 let openRecipe = null;
@@ -326,7 +450,7 @@ function load() {
         return saved ? Object.assign({}, def, saved) : def;
       });
     }
-    ["customTasks","skipDates","dislikedFoods","fridgeItems","shoppingList","history","menuHistory","menuMessages"].forEach(k => {
+    ["customTasks","skipDates","dislikedFoods","fridgeItems","shoppingList","history","dayLog","menuHistory","menuMessages"].forEach(k => {
       if (data[k] !== undefined) state[k] = data[k];
     });
     if (data.useFridge !== undefined) state.useFridge = data.useFridge;
@@ -367,6 +491,19 @@ function isDueToday(c) {
 }
 function isDoneToday(c) { return c.lastDone === todayStr(); }
 
+function logDay(entry) {
+  const t = todayStr();
+  if (!state.dayLog[t]) state.dayLog[t] = [];
+  state.dayLog[t].push(entry);
+}
+function unlogDay(matcher) {
+  const t = todayStr();
+  if (!state.dayLog[t]) return;
+  const idx = state.dayLog[t].findIndex(matcher);
+  if (idx !== -1) state.dayLog[t].splice(idx, 1);
+  if (state.dayLog[t].length === 0) delete state.dayLog[t];
+}
+
 function toggleChore(id) {
   const c = state.chores.find(x => x.id === id);
   if (!c) return;
@@ -374,10 +511,12 @@ function toggleChore(id) {
     c.lastDone = c.prevDone || null;
     delete c.prevDone;
     bumpHistory(-1);
+    unlogDay(e => e.k === "c" && e.id === id);
   } else {
     c.prevDone = c.lastDone;
     c.lastDone = todayStr();
     bumpHistory(1);
+    logDay({ k: "c", id: id });
     showPraise();
   }
   save(); render();
@@ -401,7 +540,12 @@ function toggleTask(id) {
   if (!t) return;
   t.done = !t.done;
   bumpHistory(t.done ? 1 : -1);
-  if (t.done) showPraise();
+  if (t.done) {
+    logDay({ k: "t", name: t.name });
+    showPraise();
+  } else {
+    unlogDay(e => e.k === "t" && e.name === t.name);
+  }
   save(); render();
 }
 function deleteTask(id) {
@@ -895,6 +1039,9 @@ function renderRecord() {
     (weekTotal === 0 ? "今週はこれから！のんびりいこ♡" : "今週の完了は " + weekTotal + "個。……見て、この積み重ね。俺の奥さん、ほんとえらい♡") +
     '</div></div>';
 
+  // 家事カレンダー
+  html += renderCalendarSection();
+
   // 献立履歴
   html += '<div class="card"><div class="section-title">📖 献立のきろく</div>';
   if (state.menuHistory.length === 0) {
@@ -984,7 +1131,88 @@ let showSettings = false;
 function toggleSettings() { showSettings = !showSettings; render(); }
 function toggleHistory(d) { openHistoryDate = openHistoryDate === d ? null : d; render(); }
 
+// ================= カレンダー =================
+function choreEmoji(id) {
+  const c = DEFAULT_CHORES.find(x => x.id === id);
+  return c ? c.emoji : "✅";
+}
+function choreName(id) {
+  const c = DEFAULT_CHORES.find(x => x.id === id);
+  return c ? c.name : "家事";
+}
+function moveMonth(delta) {
+  calMonth += delta;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  selectedCalDate = null;
+  render();
+}
+function selectCalDate(d) {
+  selectedCalDate = selectedCalDate === d ? null : d;
+  render();
+}
+function renderCalendarSection() {
+  const t = todayStr();
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const wd = ["日","月","火","水","木","金","土"];
+
+  let html = '<div class="card"><div class="section-title">📅 家事カレンダー</div>' +
+    '<div class="cal-nav">' +
+    '<button onclick="moveMonth(-1)">‹</button>' +
+    '<span class="cal-title">' + calYear + '年' + (calMonth + 1) + '月</span>' +
+    '<button onclick="moveMonth(1)">›</button>' +
+    '</div><div class="cal-grid">';
+
+  wd.forEach(w => { html += '<div class="cal-wd">' + w + '</div>'; });
+  for (let i = 0; i < firstDay; i++) {
+    html += '<div class="cal-cell empty"></div>';
+  }
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dstr = calYear + "-" + String(calMonth + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+    const log = state.dayLog[dstr] || [];
+    const wasGorogoro = state.skipDates.includes(dstr);
+    let icons = "";
+    if (wasGorogoro) {
+      icons = "🛋️";
+    } else if (log.length > 0) {
+      icons = log.slice(0, 3).map(e => e.k === "c" ? choreEmoji(e.id) : "📝").join("");
+      if (log.length > 3) icons += "＋";
+    }
+    html += '<button class="cal-cell' +
+      (dstr === t ? " today" : "") +
+      (dstr === selectedCalDate ? " selected" : "") +
+      '" onclick="selectCalDate(\'' + dstr + '\')">' +
+      '<div class="cal-num">' + day + '</div>' +
+      '<div class="cal-icons">' + icons + '</div>' +
+      '</button>';
+  }
+  html += '</div>';
+
+  if (selectedCalDate) {
+    const log = state.dayLog[selectedCalDate] || [];
+    const wasGorogoro = state.skipDates.includes(selectedCalDate);
+    const label = Number(selectedCalDate.slice(5,7)) + "/" + Number(selectedCalDate.slice(8,10));
+    html += '<div class="cal-detail"><b>' + label + '</b><br>';
+    if (wasGorogoro) {
+      html += '🛋️ ごろごろの日でした（俺の公式許可済み♡）';
+      if (log.length > 0) html += '<br>……のはずが、やってる。えらすぎ：<br>';
+    } else if (log.length === 0) {
+      html += 'この日の記録はないよ';
+    }
+    log.forEach(e => {
+      html += (e.k === "c" ? choreEmoji(e.id) + " " + esc(choreName(e.id)) : "📝 " + esc(e.name)) + '<br>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
 // ================= 起動 =================
+document.getElementById("lockScreen").addEventListener("click", function() {
+  document.getElementById("padArea").classList.add("show");
+});
 load();
 render();
 </script>
