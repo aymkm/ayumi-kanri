@@ -280,18 +280,38 @@
 // ================= 定数 =================
 const STORAGE_KEY = "ayumi-kanri-data";
 const PASSCODE = "0621";
+const AUTO_LOCK_MS = 5 * 60 * 1000;
+const EMOJI_PRESETS = ["🧺","🍽️","🗑️","🪟","🧽","🌱","🐾","👕","🧴","📦"];
 
 // ================= ロック画面 =================
 let padValue = "";
+let isLocked = true;
+let lastActivity = Date.now();
+
+function unlock() {
+  isLocked = false;
+  lastActivity = Date.now();
+  const ls = document.getElementById("lockScreen");
+  ls.style.opacity = "0";
+  setTimeout(() => { ls.style.display = "none"; }, 400);
+}
+function lock() {
+  if (isLocked) return;
+  isLocked = true;
+  padValue = "";
+  updateDots();
+  document.getElementById("padArea").classList.remove("show");
+  const ls = document.getElementById("lockScreen");
+  ls.style.display = "flex";
+  requestAnimationFrame(() => { ls.style.opacity = "1"; });
+}
 function padInput(n) {
   if (padValue.length >= 4) return;
   padValue += n;
   updateDots();
   if (padValue.length === 4) {
     if (padValue === PASSCODE) {
-      const ls = document.getElementById("lockScreen");
-      ls.style.opacity = "0";
-      setTimeout(() => { ls.style.display = "none"; }, 400);
+      unlock();
     } else {
       const d = document.getElementById("dots");
       d.classList.add("shake");
@@ -445,10 +465,12 @@ function load() {
     const data = JSON.parse(raw);
     // 家事はデフォルトとマージ（新項目追加に備える）
     if (data.chores) {
-      state.chores = DEFAULT_CHORES.map(def => {
+      const merged = DEFAULT_CHORES.map(def => {
         const saved = data.chores.find(c => c.id === def.id);
         return saved ? Object.assign({}, def, saved) : def;
       });
+      const customs = data.chores.filter(c => c.isCustom);
+      state.chores = merged.concat(customs);
     }
     ["customTasks","skipDates","dislikedFoods","fridgeItems","shoppingList","history","dayLog","menuHistory","menuMessages"].forEach(k => {
       if (data[k] !== undefined) state[k] = data[k];
@@ -516,9 +538,36 @@ function toggleChore(id) {
     c.prevDone = c.lastDone;
     c.lastDone = todayStr();
     bumpHistory(1);
-    logDay({ k: "c", id: id });
+    logDay({ k: "c", id: id, emoji: c.emoji, name: c.name });
     showPraise();
   }
+  save(); render();
+}
+
+let newChoreEmoji = EMOJI_PRESETS[0];
+function setNewChoreEmoji(e) { newChoreEmoji = e; render(); }
+function addChore() {
+  const el = document.getElementById("newChoreName");
+  const freqEl = document.getElementById("newChoreFreq");
+  const name = el.value.trim();
+  if (!name) return;
+  state.chores.push({
+    id: "custom_" + Date.now(),
+    name: name,
+    emoji: newChoreEmoji,
+    frequencyDays: Number(freqEl.value),
+    lastDone: null,
+    isCustom: true,
+  });
+  el.value = "";
+  save(); render();
+  showToast("「" + name + "」を定番家事に追加したよ♡");
+}
+function deleteChore(id) {
+  const c = state.chores.find(x => x.id === id);
+  if (!c || !c.isCustom) return;
+  if (!confirm("「" + c.name + "」を定番家事から削除する？（カレンダーの過去の記録は残るよ）")) return;
+  state.chores = state.chores.filter(x => x.id !== id);
   save(); render();
 }
 function changeFreq(id, value) {
@@ -1085,17 +1134,38 @@ function renderRecord() {
   html += '</div></div>';
 
   // 頻度設定
-  html += '<div class="card"><button class="collapse-head" onclick="toggleSettings()"><span>⚙️ 家事の頻度設定</span><span style="color:#b0a48f">' + (showSettings ? "▲" : "▼") + '</span></button>';
+  html += '<div class="card"><button class="collapse-head" onclick="toggleSettings()"><span>⚙️ 家事の設定（頻度・追加）</span><span style="color:#b0a48f">' + (showSettings ? "▲" : "▼") + '</span></button>';
   if (showSettings) {
     html += '<div style="margin-top:12px">';
     state.chores.forEach(c => {
       html += '<div class="settings-row"><span style="font-size:14px">' + c.emoji + ' ' + esc(c.name) + '</span>' +
+        '<span style="display:flex;align-items:center;gap:4px">' +
         '<select onchange="changeFreq(\'' + c.id + '\', this.value)">';
       FREQ_OPTIONS.forEach(o => {
         html += '<option value="' + o.value + '"' + (c.frequencyDays === o.value ? " selected" : "") + '>' + o.label + '</option>';
       });
-      html += '</select></div>';
+      html += '</select>' +
+        (c.isCustom ? '<button class="btn-x" onclick="deleteChore(\'' + c.id + '\')">×</button>' : "") +
+        '</span></div>';
     });
+    // 新しい家事の追加フォーム
+    html += '<div style="margin-top:14px;padding:12px;background:#faf6ee;border-radius:12px">' +
+      '<div style="font-size:13px;font-weight:bold;color:#5f6b4f;margin-bottom:8px">＋ 新しい家事を追加</div>' +
+      '<input type="text" id="newChoreName" placeholder="例：洗濯" style="width:100%;margin-bottom:8px">' +
+      '<div style="font-size:12px;color:#b0a48f;margin-bottom:6px">アイコンを選ぶ</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+    EMOJI_PRESETS.forEach(e => {
+      html += '<button onclick="setNewChoreEmoji(\'' + e + '\')" style="font-size:18px;padding:6px 8px;border-radius:10px;cursor:pointer;font-family:inherit;background:' +
+        (newChoreEmoji === e ? "#eef2e6;border:1.5px solid #7a9b6d" : "#fffdf9;border:1.5px solid #e5dcc9") + '">' + e + '</button>';
+    });
+    html += '</div><div class="row">' +
+      '<select id="newChoreFreq" style="flex:1">';
+    FREQ_OPTIONS.forEach(o => {
+      html += '<option value="' + o.value + '"' + (o.value === 7 ? " selected" : "") + '>' + o.label + '</option>';
+    });
+    html += '</select>' +
+      '<button class="btn-add" onclick="addChore()">追加</button>' +
+      '</div></div>';
     html += '</div>';
   }
   html += '</div>';
@@ -1133,11 +1203,11 @@ function toggleHistory(d) { openHistoryDate = openHistoryDate === d ? null : d; 
 
 // ================= カレンダー =================
 function choreEmoji(id) {
-  const c = DEFAULT_CHORES.find(x => x.id === id);
+  const c = state.chores.find(x => x.id === id) || DEFAULT_CHORES.find(x => x.id === id);
   return c ? c.emoji : "✅";
 }
 function choreName(id) {
-  const c = DEFAULT_CHORES.find(x => x.id === id);
+  const c = state.chores.find(x => x.id === id) || DEFAULT_CHORES.find(x => x.id === id);
   return c ? c.name : "家事";
 }
 function moveMonth(delta) {
@@ -1176,7 +1246,7 @@ function renderCalendarSection() {
     if (wasGorogoro) {
       icons = "🛋️";
     } else if (log.length > 0) {
-      icons = log.slice(0, 3).map(e => e.k === "c" ? choreEmoji(e.id) : "📝").join("");
+      icons = log.slice(0, 3).map(e => e.k === "c" ? (e.emoji || choreEmoji(e.id)) : "📝").join("");
       if (log.length > 3) icons += "＋";
     }
     html += '<button class="cal-cell' +
@@ -1201,7 +1271,9 @@ function renderCalendarSection() {
       html += 'この日の記録はないよ';
     }
     log.forEach(e => {
-      html += (e.k === "c" ? choreEmoji(e.id) + " " + esc(choreName(e.id)) : "📝 " + esc(e.name)) + '<br>';
+      html += (e.k === "c"
+        ? (e.emoji || choreEmoji(e.id)) + " " + esc(e.name || choreName(e.id))
+        : "📝 " + esc(e.name)) + '<br>';
     });
     html += '</div>';
   }
@@ -1212,6 +1284,19 @@ function renderCalendarSection() {
 // ================= 起動 =================
 document.getElementById("lockScreen").addEventListener("click", function() {
   document.getElementById("padArea").classList.add("show");
+});
+["click","touchstart","scroll","keydown"].forEach(function(ev) {
+  document.addEventListener(ev, function() {
+    if (!isLocked) lastActivity = Date.now();
+  }, { passive: true });
+});
+setInterval(function() {
+  if (!isLocked && Date.now() - lastActivity > AUTO_LOCK_MS) lock();
+}, 15000);
+document.addEventListener("visibilitychange", function() {
+  if (document.visibilityState === "visible") {
+    if (!isLocked && Date.now() - lastActivity > AUTO_LOCK_MS) lock();
+  }
 });
 load();
 render();
