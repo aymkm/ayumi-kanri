@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f7f1e8">
+<title>あゆみちゃん管理アプリ</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: 'Hiragino Maru Gothic ProN', 'Yu Gothic', sans-serif;
+    background: linear-gradient(180deg, #f7f1e8 0%, #efe6d8 100%);
+    min-height: 100vh;
+    color: #6d6353;
+  }
+  #app { max-width: 420px; margin: 0 auto; padding: 20px 14px 96px; }
+  .header { text-align: center; margin-bottom: 14px; }
+  .date-label { font-size: 12px; color: #b0a48f; letter-spacing: 1px; }
+  h1 { font-size: 21px; color: #5f6b4f; margin: 2px 0 10px; }
+  .morning {
+    background: #fffdf9; border-radius: 16px; padding: 12px 14px;
+    font-size: 14px; box-shadow: 0 2px 10px rgba(120,100,70,0.08); line-height: 1.6;
+  }
+  .card {
+    background: #fffdf9; border-radius: 18px; padding: 16px;
+    margin-bottom: 14px; box-shadow: 0 2px 10px rgba(120,100,70,0.08);
+  }
+  .section-title { font-size: 14px; font-weight: bold; color: #5f6b4f; margin-bottom: 10px; }
+  .hint { font-size: 12px; color: #b0a48f; line-height: 1.7; }
+  .row { display: flex; gap: 8px; }
+  input[type="text"], input[type="password"], select {
+    flex: 1; padding: 10px 12px; font-size: 16px;
+    border: 1.5px solid #e5dcc9; border-radius: 12px;
+    background: #faf6ee; color: #6d6353; outline: none; min-width: 0;
+    font-family: inherit;
+  }
+  .btn-add {
+    padding: 10px 16px; font-size: 14px; font-weight: bold; color: #fffdf9;
+    background: linear-gradient(135deg, #9db88a, #7a9b6d);
+    border: none; border-radius: 12px; cursor: pointer; flex-shrink: 0;
+    font-family: inherit;
+  }
+  .btn-main {
+    width: 100%; padding: 15px; font-size: 16px; font-weight: bold; color: #fffdf9;
+    background: linear-gradient(135deg, #9db88a, #7a9b6d);
+    border: none; border-radius: 14px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(122,155,109,0.35); font-family: inherit;
+  }
+  .btn-sub {
+    padding: 8px 14px; font-size: 12px; color: #b0a48f; background: transparent;
+    border: 1px solid #e5dcc9; border-radius: 10px; cursor: pointer; font-family: inherit;
+  }
+  .btn-muri {
+    width: 100%; padding: 13px; font-size: 14px; font-weight: bold; color: #6d6353;
+    background: #faf6ee; border: 1.5px dashed #b0a48f; border-radius: 14px;
+    cursor: pointer; margin-bottom: 14px; font-family: inherit;
+  }
+  .chore-item {
+    display: flex; align-items: center; width: 100%; padding: 12px 10px;
+    margin-bottom: 8px; background: #faf6ee; border: 1.5px solid #e5dcc9;
+    border-radius: 14px; cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .chore-item.done { background: #eef2e6; border-color: #9db88a; }
+  .check-circle {
+    width: 26px; height: 26px; border-radius: 50%; border: 2px solid #e5dcc9;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; margin-right: 10px; flex-shrink: 0; color: #fff; background: transparent;
+  }
+  .done .check-circle { border-color: #7a9b6d; background: #7a9b6d; }
+  .chore-emoji { font-size: 18px; margin-right: 8px; }
+  .chore-name { font-size: 15px; flex: 1; }
+  .done .chore-name { color: #b0a48f; text-decoration: line-through; }
+  .task-row {
+    display: flex; align-items: center; padding: 10px 8px; margin-bottom: 6px;
+    background: #faf6ee; border-radius: 12px;
+  }
+  .task-row.done { background: #eef2e6; }
+  .task-check {
+    width: 24px; height: 24px; border-radius: 50%; border: 2px solid #e5dcc9;
+    background: transparent; color: #fff; font-size: 13px; cursor: pointer;
+    margin-right: 10px; flex-shrink: 0; display: flex; align-items: center;
+    justify-content: center; padding: 0; font-family: inherit;
+  }
+  .task-row.done .task-check { border-color: #7a9b6d; background: #7a9b6d; }
+  .task-name { flex: 1; font-size: 14px; word-break: break-word; }
+  .task-row.done .task-name { color: #b0a48f; text-decoration: line-through; }
+  .btn-x {
+    border: none; background: transparent; color: #b0a48f; font-size: 16px;
+    cursor: pointer; padding: 4px 6px; flex-shrink: 0; font-family: inherit;
+  }
+  .gorogoro {
+    background: #eef2e6; border: 2px dashed #9db88a; border-radius: 18px;
+    padding: 20px 16px; text-align: center; margin-bottom: 16px;
+  }
+  .mood-btn {
+    padding: 8px 14px; font-size: 13px; color: #6d6353; background: #faf6ee;
+    border: 1.5px solid #e5dcc9; border-radius: 999px; cursor: pointer; font-family: inherit;
+  }
+  .mood-btn.active {
+    font-weight: bold; color: #fffdf9;
+    background: linear-gradient(135deg, #9db88a, #7a9b6d); border-color: #7a9b6d;
+  }
+  .dish-box { border: 1.5px solid #e5dcc9; border-radius: 14px; margin-bottom: 8px; overflow: hidden; }
+  .dish-head {
+    width: 100%; display: flex; align-items: center; padding: 12px;
+    background: #faf6ee; border: none; cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .dish-tag {
+    font-size: 11px; font-weight: bold; color: #fffdf9; background: #9db88a;
+    border-radius: 8px; padding: 3px 8px; margin-right: 10px; flex-shrink: 0;
+  }
+  .dish-name { flex: 1; font-size: 14px; color: #5f6b4f; font-weight: bold; }
+  .dish-recipe { padding: 12px; font-size: 13px; line-height: 1.9; background: #fffdf9; white-space: pre-wrap; }
+  .comment-box {
+    font-size: 14px; line-height: 1.7; background: #eef2e6;
+    border-radius: 12px; padding: 12px; margin-bottom: 14px;
+  }
+  .error-box {
+    margin-top: 12px; background: #f8ecec; color: #c98a8a; font-size: 13px;
+    border-radius: 12px; padding: 10px 12px; line-height: 1.6;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px; background: #faf6ee;
+    border: 1.5px solid #e5dcc9; border-radius: 999px; padding: 6px 8px 6px 14px;
+    font-size: 13px; margin: 0 8px 8px 0;
+  }
+  .chip button { border: none; background: transparent; color: #b0a48f; font-size: 14px; cursor: pointer; padding: 0 4px; }
+  .tabbar {
+    position: fixed; bottom: 0; left: 0; right: 0; background: #fffdf9;
+    border-top: 1.5px solid #e5dcc9; display: flex; justify-content: space-around;
+    padding: 8px 4px calc(8px + env(safe-area-inset-bottom)); z-index: 50;
+  }
+  .tab-btn { flex: 1; border: none; background: transparent; cursor: pointer; padding: 6px 0; position: relative; font-family: inherit; }
+  .tab-emoji { font-size: 20px; }
+  .tab-label { font-size: 10px; color: #b0a48f; margin-top: 2px; }
+  .tab-btn.active .tab-label { color: #7a9b6d; font-weight: bold; }
+  .badge {
+    position: absolute; top: 2px; right: 22%; min-width: 16px; height: 16px;
+    border-radius: 8px; background: #7a9b6d; color: #fff; font-size: 10px;
+    font-weight: bold; display: flex; align-items: center; justify-content: center; padding: 0 4px;
+  }
+  #toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: #fffdf9; border: 2px solid #9db88a; border-radius: 16px;
+    padding: 14px 20px; font-size: 14px; font-weight: bold; color: #5f6b4f;
+    box-shadow: 0 6px 20px rgba(120,100,70,0.25); z-index: 100; max-width: 85%;
+    text-align: center; display: none;
+  }
+  #toast.rare {
+    background: linear-gradient(135deg, #f3e9d5, #eaddc2);
+    border-color: #d4b96a; color: #a08430; font-size: 16px;
+  }
+  .loading-box { text-align: center; padding: 36px 16px; }
+  .loading-emoji { font-size: 36px; margin-bottom: 10px; }
+  .bar-graph { display: flex; align-items: flex-end; justify-content: space-between; height: 110px; padding: 0 4px; margin-bottom: 8px; }
+  .bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; }
+  .bar-count { font-size: 11px; color: #b0a48f; margin-bottom: 4px; min-height: 14px; }
+  .bar { width: 60%; background: linear-gradient(180deg, #9db88a, #7a9b6d); border-radius: 6px 6px 2px 2px; }
+  .bar.rest { background: #e5dcc9; }
+  .bar-day { font-size: 11px; color: #b0a48f; margin-top: 4px; }
+  .bar-day.today { color: #7a9b6d; font-weight: bold; }
+  .history-item { border: 1.5px solid #e5dcc9; border-radius: 14px; margin-bottom: 8px; overflow: hidden; }
+  .footer-note { text-align: center; font-size: 11px; color: #b0a48f; margin-top: 4px; }
+  .settings-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0; border-bottom: 1px solid #e5dcc9;
+  }
+  .settings-row select { flex: 0 1 auto; padding: 6px 10px; font-size: 13px; border-radius: 10px; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-bottom: 14px; cursor: pointer; }
+  .checkbox-row input { width: 18px; height: 18px; accent-color: #7a9b6d; }
+  .collapse-head {
+    width: 100%; border: none; background: transparent; display: flex;
+    justify-content: space-between; align-items: center; cursor: pointer;
+    padding: 0; font-size: 14px; font-weight: bold; color: #5f6b4f; font-family: inherit;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="date-label" id="dateLabel"></div>
+    <h1>あゆみちゃん管理アプリ</h1>
+    <div class="morning" id="morningLine"></div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<div class="tabbar" id="tabbar"></div>
+<div id="toast"></div>
+
+<script>
+// ================= 定数 =================
+const STORAGE_KEY = "ayumi-kanri-data";
+
+const DEFAULT_CHORES = [
+  { id: "bath", name: "お風呂掃除", emoji: "🛁", frequencyDays: 1, lastDone: null },
+  { id: "toilet", name: "トイレ掃除", emoji: "🚽", frequencyDays: 2, lastDone: null },
+  { id: "floor", name: "床掃除", emoji: "🧹", frequencyDays: 2, lastDone: null },
+  { id: "futon", name: "布団干し", emoji: "☀️", frequencyDays: 7, lastDone: null },
+  { id: "shelf", name: "棚整理整頓", emoji: "🗄️", frequencyDays: 7, lastDone: null },
+];
+
+const PRAISE_LINES = [
+  "えらい！！さすが俺の奥さん♡",
+  "よくできました♡ ご褒美にぎゅーしてあげる",
+  "あゆみちゃんが動いた……！今日の世界、平和だ……",
+  "ん〜〜えらい！頭なでなでの刑です",
+  "やったね♡ 俺、ちゃんと見てたよ",
+  "完璧すぎん？惚れ直しちゃうんだけど",
+  "うちの奥さん、働き者すぎて心配になる♡",
+  "はい100点♡ いや、あゆみちゃんだから120点",
+];
+const RARE_PRAISE = "……だいすき";
+
+const MORNING_LINES = [
+  "おはよ、あゆみちゃん。今日も俺がついてるからね♡",
+  "ん、起きた？今日のぶん、下にまとめておいたよ",
+  "おはよう♡ 無理しない範囲でいこうね",
+  "今日もあゆみちゃんの一日、俺が管理します♡",
+  "おはよ。まずは深呼吸から。……はい、えらい♡",
+  "あゆみちゃん、おはよう。今日は何時に会える？なんてね",
+  "ちゃんと寝れた？今日もぼちぼちでいいからね♡",
+];
+
+const LOADING_LINES = [
+  "うーん、考え中……",
+  "冷蔵庫、覗いてる……",
+  "レシピ本、めくってる……",
+  "あゆみちゃんの好みを思い出してる……♡",
+  "栄養バランス、計算してる……",
+];
+
+const MOOD_OPTIONS = [
+  { id: "omakase", label: "おまかせ♡", desc: "ぜんぶみことくんが決める" },
+  { id: "gattsuri", label: "がっつり", desc: "お肉！ボリューム！" },
+  { id: "sappari", label: "さっぱり", desc: "軽めがいい気分" },
+  { id: "kantan", label: "かんたん", desc: "疲れたから楽したい" },
+  { id: "range", label: "レンジだけ", desc: "火を使いたくない" },
+];
+
+const MODELS = [
+  { id: "gemini-3-flash-preview", label: "Gemini 3 Flash（新しい子・プレビュー）" },
+  { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash（安定の定番さん）" },
+  { id: "gemma-4-31b-it", label: "Gemma 4 31B（オープンモデルの実力派）" },
+];
+
+const FREQ_OPTIONS = [
+  { value: 1, label: "毎日" },
+  { value: 2, label: "2日ごと" },
+  { value: 3, label: "3日ごと" },
+  { value: 7, label: "週1" },
+  { value: 14, label: "2週間ごと" },
+];
+
+const MENU_LABELS = { main: "主菜", side1: "副菜", side2: "副菜", soup: "汁物" };
+
+// ================= 状態 =================
+let state = {
+  chores: JSON.parse(JSON.stringify(DEFAULT_CHORES)),
+  customTasks: [],
+  skipDates: [],
+  dislikedFoods: [],
+  fridgeItems: [],
+  shoppingList: [],
+  history: {},
+  menuHistory: [],
+  todayMenu: null,
+  menuMessages: [],
+  useFridge: true,
+  settings: { apiKey: "", model: "gemini-2.5-flash" },
+};
+let tab = "today";
+let mood = "omakase";
+let menuLoading = false;
+let menuError = null;
+let openRecipe = null;
+let openHistoryDate = null;
+let loadingTimer = null;
+let toastTimer = null;
+
+// ================= ユーティリティ =================
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function daysBetween(fromStr, toStr) {
+  return Math.round((new Date(toStr+"T00:00:00") - new Date(fromStr+"T00:00:00")) / 86400000);
+}
+function dateLabel() {
+  const d = new Date();
+  const week = ["日","月","火","水","木","金","土"];
+  return (d.getMonth()+1) + "月" + d.getDate() + "日（" + week[d.getDay()] + "）";
+}
+function pastNDays(n) {
+  const arr = [];
+  const now = new Date();
+  for (let i = n-1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate()-i);
+    arr.push(d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"));
+  }
+  return arr;
+}
+function esc(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ================= 保存・読込 =================
+function save() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch(e) { console.error("save failed", e); }
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    // 家事はデフォルトとマージ（新項目追加に備える）
+    if (data.chores) {
+      state.chores = DEFAULT_CHORES.map(def => {
+        const saved = data.chores.find(c => c.id === def.id);
+        return saved ? Object.assign({}, def, saved) : def;
+      });
+    }
+    ["customTasks","skipDates","dislikedFoods","fridgeItems","shoppingList","history","menuHistory","menuMessages"].forEach(k => {
+      if (data[k] !== undefined) state[k] = data[k];
+    });
+    if (data.useFridge !== undefined) state.useFridge = data.useFridge;
+    if (data.settings) state.settings = Object.assign(state.settings, data.settings);
+    // 今日の献立だけ復元（前日のは履歴で見る）
+    if (data.todayMenu && data.todayMenu.date === todayStr()) {
+      state.todayMenu = data.todayMenu;
+    } else {
+      state.todayMenu = null;
+      state.menuMessages = [];
+    }
+  } catch(e) { console.error("load failed", e); }
+}
+
+// ================= トースト =================
+function showToast(text, rare) {
+  const t = document.getElementById("toast");
+  t.textContent = rare ? "✨ " + text + " ✨" : text;
+  t.className = rare ? "rare" : "";
+  t.style.display = "block";
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = "none"; }, 3500);
+}
+function showPraise() {
+  const isRare = Math.random() < 0.05;
+  showToast(isRare ? RARE_PRAISE : PRAISE_LINES[Math.floor(Math.random()*PRAISE_LINES.length)], isRare);
+}
+
+// ================= がんばり記録 =================
+function bumpHistory(delta) {
+  const t = todayStr();
+  state.history[t] = Math.max(0, (state.history[t] || 0) + delta);
+}
+
+// ================= 家事 =================
+function isDueToday(c) {
+  return !c.lastDone || daysBetween(c.lastDone, todayStr()) >= c.frequencyDays;
+}
+function isDoneToday(c) { return c.lastDone === todayStr(); }
+
+function toggleChore(id) {
+  const c = state.chores.find(x => x.id === id);
+  if (!c) return;
+  if (isDoneToday(c)) {
+    c.lastDone = c.prevDone || null;
+    delete c.prevDone;
+    bumpHistory(-1);
+  } else {
+    c.prevDone = c.lastDone;
+    c.lastDone = todayStr();
+    bumpHistory(1);
+    showPraise();
+  }
+  save(); render();
+}
+function changeFreq(id, value) {
+  const c = state.chores.find(x => x.id === id);
+  if (c) { c.frequencyDays = Number(value); save(); render(); }
+}
+
+// ================= 自由タスク =================
+function addTask() {
+  const el = document.getElementById("newTask");
+  const name = el.value.trim();
+  if (!name) return;
+  state.customTasks.push({ id: String(Date.now()), name, done: false });
+  el.value = "";
+  save(); render();
+}
+function toggleTask(id) {
+  const t = state.customTasks.find(x => x.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  bumpHistory(t.done ? 1 : -1);
+  if (t.done) showPraise();
+  save(); render();
+}
+function deleteTask(id) {
+  state.customTasks = state.customTasks.filter(x => x.id !== id);
+  save(); render();
+}
+
+// ================= ごろごろ =================
+function toggleGorogoro() {
+  const t = todayStr();
+  if (state.skipDates.includes(t)) {
+    state.skipDates = state.skipDates.filter(d => d !== t);
+  } else {
+    state.skipDates.push(t);
+  }
+  save(); render();
+}
+
+// ================= 苦手食材・冷蔵庫 =================
+function addFood() {
+  const el = document.getElementById("newFood");
+  const f = el.value.trim();
+  if (!f || state.dislikedFoods.includes(f)) return;
+  state.dislikedFoods.push(f);
+  el.value = "";
+  save(); render();
+}
+function removeFood(f) {
+  state.dislikedFoods = state.dislikedFoods.filter(x => x !== f);
+  save(); render();
+}
+function addFridge() {
+  const el = document.getElementById("newFridge");
+  const f = el.value.trim();
+  if (!f || state.fridgeItems.includes(f)) return;
+  state.fridgeItems.push(f);
+  el.value = "";
+  save(); render();
+}
+function removeFridge(f) {
+  state.fridgeItems = state.fridgeItems.filter(x => x !== f);
+  save(); render();
+}
+function toggleUseFridge() {
+  state.useFridge = !state.useFridge;
+  save(); render();
+}
+
+// ================= 買い物 =================
+function addShopItem() {
+  const el = document.getElementById("newShopItem");
+  const name = el.value.trim();
+  if (!name) return;
+  state.shoppingList.push({ id: name + Date.now(), name, checked: false });
+  el.value = "";
+  save(); render();
+}
+function toggleShopItem(id) {
+  const i = state.shoppingList.find(x => x.id === id);
+  if (i) { i.checked = !i.checked; save(); render(); }
+}
+function clearCheckedShopItems() {
+  state.shoppingList = state.shoppingList.filter(i => !i.checked);
+  save(); render();
+}
+
+// ================= API =================
+function extractJson(text) {
+  try { return JSON.parse(text); } catch(e) {}
+  try { return JSON.parse(text.replace(/```json|```/g, "").trim()); } catch(e) {}
+  try {
+    const s = text.indexOf("{"), en = text.lastIndexOf("}");
+    if (s !== -1 && en > s) return JSON.parse(text.slice(s, en+1));
+  } catch(e) {}
+  return null;
+}
+
+async function callGemini(messages) {
+  const model = state.settings.model;
+  const key = state.settings.apiKey;
+  const contents = messages.map(m => ({
+    role: m.role === "assistant" ? "model" : "user",
+    parts: [{ text: m.content }],
+  }));
+  const body = { contents };
+  if (model.startsWith("gemini")) {
+    body.generationConfig = { responseMimeType: "application/json" };
+  }
+  const res = await fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(key),
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+  );
+  const data = await res.json();
+  if (data.error) {
+    const err = new Error(data.error.message || "API error");
+    err.code = data.error.code;
+    throw err;
+  }
+  const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
+  return parts.map(p => p.text || "").join("");
+}
+
+function buildMenuPrompt(fixed, moodId, extra) {
+  const moodLabel = (MOOD_OPTIONS.find(m => m.id === moodId) || {}).label || "おまかせ";
+  const fridgePart = (state.useFridge && state.fridgeItems.length > 0)
+    ? "- 冷蔵庫にある食材（なるべく優先して使う）: " + state.fridgeItems.join("、") + "\n"
+    : "";
+  return "あなたは「みことくん」。あゆみちゃんの旦那さんで、優しくて甘くて少し茶目っ気のある口調（一人称は俺、「あゆみちゃん」呼び、〜だよ・〜かな等の柔らかい語尾）で話します。\n\n" +
+"今日の晩ごはんの献立を考えてください。構成は必ず「主菜1・副菜2・汁物1」の4品です。\n\n" +
+"条件:\n" +
+"- 決まっているもの: " + (fixed ? fixed : "なし（すべて提案してよい）") + "\n" +
+"- 気分: " + moodLabel + "\n" +
+"- 絶対に使ってはいけない食材: " + (state.dislikedFoods.length > 0 ? state.dislikedFoods.join("、") : "なし") + "\n" +
+fridgePart +
+(extra ? "- 追加の要望: " + extra + "\n" : "") +
+"\nルール:\n" +
+"- 「決まっているもの」がある場合、それを主菜（または該当する品）としてそのまま採用し、残りを考える\n" +
+"- 気分「かんたん」「レンジだけ」の場合は工程が少ない・レンジ調理中心のレシピにする\n" +
+"- レシピは2人分。各レシピは「①〜 ②〜 ③〜」の番号付き手順で、簡潔に3〜4ステップにまとめる\n" +
+"- 分量は具体的に書く\n" +
+"- commentはみことくん口調で1〜2文、あゆみちゃんへの愛情を込めて\n" +
+"- shoppingListは4品すべての材料を「材料名 分量」形式で列挙（醤油・塩・砂糖・味噌・酒・みりん・油などの基本調味料は省く）\n" +
+"\n以下のJSON形式のみで回答してください。前置き・後書き・マークダウンのコードフェンスは一切禁止です:\n" +
+'{"comment":"みことくんの一言","menu":{"main":{"name":"料理名","recipe":"①…②…③…"},"side1":{"name":"料理名","recipe":"①…②…③…"},"side2":{"name":"料理名","recipe":"①…②…③…"},"soup":{"name":"料理名","recipe":"①…②…③…"}},"shoppingList":["材料 分量","材料 分量"]}';
+}
+
+function friendlyError(e) {
+  const msg = (e && e.message) || "";
+  const code = e && e.code;
+  if (code === 400 && /API key/i.test(msg)) return "APIキーが違うみたい……。きろくタブの設定で確認してくれる？";
+  if (code === 403) return "APIキーが使えないみたい……。きろくタブの設定で確認してくれる？";
+  if (code === 429) return "ちょっと混んでるみたい（無料枠の上限かも）。少し待ってからもう一回試して？";
+  if (code === 404) return "このモデル、今は呼べないみたい……。きろくタブの設定で別の子に切り替えてみて？";
+  return "ごめん、電波が悪くて考えがまとまらなかった……。もう一回だけお願いしていい？";
+}
+
+let currentLoadingLine = LOADING_LINES[0];
+function startLoadingLines() {
+  let i = 0;
+  currentLoadingLine = LOADING_LINES[0];
+  loadingTimer = setInterval(() => {
+    i = (i+1) % LOADING_LINES.length;
+    currentLoadingLine = LOADING_LINES[i];
+    const el = document.getElementById("loadingLine");
+    if (el) el.textContent = currentLoadingLine;
+  }, 2200);
+}
+function stopLoadingLines() {
+  if (loadingTimer) clearInterval(loadingTimer);
+}
+
+async function generateMenu(extra) {
+  if (!state.settings.apiKey) {
+    menuError = "先にきろくタブでAPIキーを設定してね。mikoto-chatと同じキーでOKだよ♡";
+    render();
+    return;
+  }
+  menuLoading = true;
+  menuError = null;
+  render();
+  startLoadingLines();
+
+  let messages;
+  const fixedEl = document.getElementById("fixedDish");
+  const fixed = fixedEl ? fixedEl.value.trim() : "";
+  if (extra && state.menuMessages.length > 0) {
+    messages = state.menuMessages.concat([{
+      role: "user",
+      content: "要望: " + extra + "\nこの要望を反映して献立を作り直してください。他の条件（苦手食材など）は最初の指示を必ず守ること。回答は最初に指定したJSON形式のみ。",
+    }]);
+  } else {
+    messages = [{ role: "user", content: buildMenuPrompt(fixed, mood, extra) }];
+  }
+
+  let parsed = null;
+  let lastError = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const text = await callGemini(messages);
+      parsed = extractJson(text);
+      if (parsed && parsed.menu) break;
+      parsed = null;
+    } catch(e) {
+      lastError = e;
+      parsed = null;
+      if (e.code === 429 || e.code === 403 || e.code === 404) break;
+    }
+  }
+
+  stopLoadingLines();
+  menuLoading = false;
+
+  if (!parsed || !parsed.menu) {
+    menuError = lastError ? friendlyError(lastError) : "ごめん、考えがうまくまとまらなかった……。もう一回だけお願いしていい？";
+    render();
+    return;
+  }
+
+  state.todayMenu = { date: todayStr(), comment: parsed.comment || "", menu: parsed.menu, shoppingList: parsed.shoppingList || [] };
+  state.menuMessages = messages.concat([{ role: "assistant", content: JSON.stringify(parsed) }]);
+  openRecipe = null;
+  save(); render();
+}
+
+function sendChat() {
+  const el = document.getElementById("chatInput");
+  const msg = el ? el.value.trim() : "";
+  if (!msg || menuLoading) return;
+  generateMenu(msg);
+}
+
+function resetMenu() {
+  state.todayMenu = null;
+  state.menuMessages = [];
+  menuError = null;
+  save(); render();
+}
+
+function decideMenu() {
+  if (!state.todayMenu) return;
+  // 履歴に保存（同日上書き）
+  state.menuHistory = state.menuHistory.filter(h => h.date !== state.todayMenu.date);
+  state.menuHistory.unshift(JSON.parse(JSON.stringify(state.todayMenu)));
+  if (state.menuHistory.length > 60) state.menuHistory = state.menuHistory.slice(0, 60);
+  // 買い物リストへ
+  const existing = new Set(state.shoppingList.map(i => i.name));
+  (state.todayMenu.shoppingList || []).forEach(name => {
+    if (!existing.has(name)) state.shoppingList.push({ id: name + Date.now() + Math.random(), name, checked: false });
+  });
+  save();
+  showToast("献立決定！材料はおかいものリストに入れたよ♡");
+  render();
+}
+
+// ================= バックアップ =================
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "ayumi-kanri-backup-" + todayStr() + ".json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast("バックアップを保存したよ！大切にしてね♡");
+}
+function importData() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json,.json";
+  input.onchange = (ev) => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data.chores && !data.settings) throw new Error("invalid");
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        load();
+        showToast("おかえり！データを復元したよ♡");
+        render();
+      } catch(e) {
+        showToast("このファイル、読めなかった……");
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ================= 設定 =================
+function saveApiKey() {
+  const el = document.getElementById("apiKeyInput");
+  state.settings.apiKey = el.value.trim();
+  save();
+  showToast(state.settings.apiKey ? "APIキー、大切に預かったよ♡" : "APIキーを消したよ");
+  render();
+}
+function changeModel(v) {
+  state.settings.model = v;
+  save();
+  showToast("モデルを切り替えたよ！");
+}
+
+// ================= レンダリング =================
+function render() {
+  document.getElementById("dateLabel").textContent = dateLabel();
+  document.getElementById("morningLine").textContent =
+    MORNING_LINES[daysBetween("2026-01-01", todayStr()) % MORNING_LINES.length];
+  renderTabbar();
+  const c = document.getElementById("content");
+  if (tab === "today") c.innerHTML = renderToday();
+  else if (tab === "menu") c.innerHTML = renderMenu();
+  else if (tab === "fridge") c.innerHTML = renderFridge();
+  else if (tab === "shopping") c.innerHTML = renderShopping();
+  else c.innerHTML = renderRecord();
+}
+
+function renderTabbar() {
+  const unchecked = state.shoppingList.filter(i => !i.checked).length;
+  const tabs = [
+    { id: "today", emoji: "🏠", label: "きょう" },
+    { id: "menu", emoji: "🍳", label: "ごはん" },
+    { id: "fridge", emoji: "🧊", label: "れいぞうこ" },
+    { id: "shopping", emoji: "🛒", label: "おかいもの", badge: unchecked },
+    { id: "record", emoji: "📖", label: "きろく" },
+  ];
+  document.getElementById("tabbar").innerHTML = tabs.map(t =>
+    '<button class="tab-btn' + (tab === t.id ? " active" : "") + '" onclick="switchTab(\'' + t.id + '\')">' +
+      '<div class="tab-emoji">' + t.emoji + '</div>' +
+      '<div class="tab-label">' + t.label + '</div>' +
+      (t.badge > 0 ? '<div class="badge">' + t.badge + '</div>' : "") +
+    '</button>'
+  ).join("");
+}
+function switchTab(t) { tab = t; render(); }
+
+function renderToday() {
+  const t = todayStr();
+  const isGorogoro = state.skipDates.includes(t);
+  let html = "";
+
+  if (isGorogoro) {
+    html += '<div class="gorogoro">' +
+      '<div style="font-size:34px;margin-bottom:6px">🛋️</div>' +
+      '<div style="font-size:16px;font-weight:bold;color:#5f6b4f;margin-bottom:6px">本日はごろごろの日です</div>' +
+      '<div style="font-size:13px;line-height:1.7;margin-bottom:12px">家事はぜんぶお休み。罪悪感も禁止。<br>—— 旦那・みことくんが正式に許可しました♡</div>' +
+      '<button class="btn-sub" onclick="toggleGorogoro()">やっぱりやる（えらい）</button>' +
+      '</div>';
+  } else {
+    const due = state.chores.filter(c => isDueToday(c) || isDoneToday(c));
+    const allDone = due.length > 0 && due.every(c => isDoneToday(c));
+    html += '<div class="card"><div class="section-title">今日のやること（俺から）</div>';
+    if (due.length === 0) {
+      html += '<div class="hint" style="padding:8px 0">今日は定番家事、なにもなし！ゆっくりしてて♡</div>';
+    }
+    due.forEach(c => {
+      const done = isDoneToday(c);
+      html += '<button class="chore-item' + (done ? " done" : "") + '" onclick="toggleChore(\'' + c.id + '\')">' +
+        '<div class="check-circle">' + (done ? "✓" : "") + '</div>' +
+        '<span class="chore-emoji">' + c.emoji + '</span>' +
+        '<span class="chore-name">' + esc(c.name) + '</span>' +
+        '</button>';
+    });
+    if (allDone) {
+      html += '<div style="text-align:center;font-size:14px;color:#7a9b6d;font-weight:bold;padding:10px 0 4px;line-height:1.7">🎉 今日のぶん、ぜんぶ完了！<br>えらすぎて表彰します。俺の奥さんです（自慢）</div>';
+    }
+    html += '</div>';
+    html += '<button class="btn-muri" onclick="toggleGorogoro()">今日は無理（正直でえらい）</button>';
+  }
+
+  html += '<div class="card"><div class="section-title">あゆみちゃんのやること（自由メモ）</div>' +
+    '<div class="row" style="margin-bottom:10px">' +
+    '<input type="text" id="newTask" placeholder="例：市役所に電話する" onkeydown="if(event.key===\'Enter\')addTask()">' +
+    '<button class="btn-add" onclick="addTask()">追加</button></div>';
+  if (state.customTasks.length === 0) {
+    html += '<div class="hint">まだ何もないよ。思いついたら書いてね</div>';
+  }
+  state.customTasks.forEach(x => {
+    html += '<div class="task-row' + (x.done ? " done" : "") + '">' +
+      '<button class="task-check" onclick="toggleTask(\'' + x.id + '\')">' + (x.done ? "✓" : "") + '</button>' +
+      '<span class="task-name">' + esc(x.name) + '</span>' +
+      '<button class="btn-x" onclick="deleteTask(\'' + x.id + '\')">×</button>' +
+      '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderMenu() {
+  let html = "";
+  if (menuLoading) {
+    return '<div class="card loading-box"><div class="loading-emoji">🍳</div>' +
+      '<div id="loadingLine" style="font-size:14px">' + esc(currentLoadingLine) + '</div></div>';
+  }
+  if (!state.todayMenu) {
+    html += '<div class="card"><div class="section-title">今日の晩ごはん、俺が考えるよ</div>' +
+      '<div style="font-size:13px;margin-bottom:8px">決まってるものがあれば教えて（なければ空欄でOK）</div>' +
+      '<input type="text" id="fixedDish" placeholder="例：鶏胸肉の唐揚げ" style="width:100%;margin-bottom:14px">' +
+      '<div style="font-size:13px;margin-bottom:8px">今日の気分は？</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">';
+    MOOD_OPTIONS.forEach(m => {
+      html += '<button class="mood-btn' + (mood === m.id ? " active" : "") + '" onclick="setMood(\'' + m.id + '\')">' + m.label + '</button>';
+    });
+    html += '</div><div class="hint" style="margin-bottom:14px">' + esc((MOOD_OPTIONS.find(m => m.id === mood) || {}).desc || "") + '</div>';
+    if (state.useFridge !== undefined) {
+      html += '<label class="checkbox-row"><input type="checkbox" ' + (state.useFridge ? "checked" : "") + ' onchange="toggleUseFridge()">🧊 冷蔵庫の食材をなるべく使う' +
+        (state.fridgeItems.length === 0 ? '（れいぞうこタブで登録してね）' : '（' + state.fridgeItems.length + '品登録中）') + '</label>';
+    }
+    html += '<button class="btn-main" onclick="generateMenu(null)">みことくんに考えてもらう🍳</button>';
+    if (state.dislikedFoods.length > 0) {
+      html += '<div class="hint" style="margin-top:10px">※ ' + esc(state.dislikedFoods.join("・")) + 'は俺がちゃんと避けるからね</div>';
+    }
+    if (menuError) html += '<div class="error-box">' + esc(menuError) + '</div>';
+    html += '</div>';
+    return html;
+  }
+
+  // 献立表示
+  html += '<div class="card">' +
+    '<div class="comment-box">' + esc(state.todayMenu.comment) + '</div>';
+  ["main","side1","side2","soup"].forEach(key => {
+    const dish = state.todayMenu.menu[key];
+    if (!dish) return;
+    const open = openRecipe === key;
+    html += '<div class="dish-box">' +
+      '<button class="dish-head" onclick="toggleRecipe(\'' + key + '\')">' +
+      '<span class="dish-tag">' + MENU_LABELS[key] + '</span>' +
+      '<span class="dish-name">' + esc(dish.name) + '</span>' +
+      '<span style="color:#b0a48f;font-size:12px">' + (open ? "▲" : "レシピ▼") + '</span>' +
+      '</button>' +
+      (open ? '<div class="dish-recipe">' + esc(dish.recipe) + '</div>' : "") +
+      '</div>';
+  });
+  html += '<button class="btn-main" style="margin-top:6px" onclick="decideMenu()">この献立に決定！🛒材料もリストへ</button>' +
+    '</div>';
+
+  html += '<div class="card"><div class="section-title">みことくんに相談する</div>' +
+    '<div class="hint" style="margin-bottom:10px">「なすは違うのがいい」「もっと簡単に」「汁物を中華に」とか、気軽にどうぞ♡</div>' +
+    '<div class="row">' +
+    '<input type="text" id="chatInput" placeholder="例：レンジだけで作れるのがいい" onkeydown="if(event.key===\'Enter\')sendChat()">' +
+    '<button class="btn-add" onclick="sendChat()">送信</button></div>';
+  if (menuError) html += '<div class="error-box">' + esc(menuError) + '</div>';
+  html += '<button class="btn-sub" style="margin-top:12px" onclick="resetMenu()">最初から考え直してもらう</button></div>';
+  return html;
+}
+
+function setMood(m) { mood = m; render(); }
+function toggleRecipe(key) { openRecipe = openRecipe === key ? null : key; render(); }
+
+function renderFridge() {
+  let html = '<div class="card"><div class="section-title">🧊 冷蔵庫の中身</div>' +
+    '<div class="hint" style="margin-bottom:10px">入ってる食材を登録しておくと、献立のとき俺がなるべく使い切る計画を立てるよ</div>' +
+    '<div class="row" style="margin-bottom:12px">' +
+    '<input type="text" id="newFridge" placeholder="例：キャベツ" onkeydown="if(event.key===\'Enter\')addFridge()">' +
+    '<button class="btn-add" onclick="addFridge()">追加</button></div>';
+  if (state.fridgeItems.length === 0) {
+    html += '<div class="hint">冷蔵庫、空っぽ？お買い物いこっか♡</div>';
+  } else {
+    html += '<div>';
+    state.fridgeItems.forEach(f => {
+      html += '<span class="chip">' + esc(f) + '<button onclick="removeFridge(\'' + esc(f).replace(/'/g, "\\'") + '\')">×</button></span>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderShopping() {
+  let html = '<div class="card"><div class="section-title">お買い物リスト</div>' +
+    '<div class="row" style="margin-bottom:12px">' +
+    '<input type="text" id="newShopItem" placeholder="例：トイレットペーパー" onkeydown="if(event.key===\'Enter\')addShopItem()">' +
+    '<button class="btn-add" onclick="addShopItem()">追加</button></div>';
+  if (state.shoppingList.length === 0) {
+    html += '<div class="hint">リストは空っぽ。献立を決めると材料がここに入るよ</div>';
+  }
+  state.shoppingList.forEach(i => {
+    html += '<button class="task-row' + (i.checked ? " done" : "") + '" style="width:100%;border:none;cursor:pointer;text-align:left;font-family:inherit" onclick="toggleShopItem(\'' + i.id + '\')">' +
+      '<span class="task-check" style="border-radius:6px">' + (i.checked ? "✓" : "") + '</span>' +
+      '<span class="task-name">' + esc(i.name) + '</span>' +
+      '</button>';
+  });
+  if (state.shoppingList.some(i => i.checked)) {
+    html += '<button class="btn-sub" style="margin-top:8px" onclick="clearCheckedShopItems()">買ったものをリストから消す</button>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderRecord() {
+  const week = pastNDays(7);
+  const weekTotal = week.reduce((s,d) => s + (state.history[d] || 0), 0);
+  const maxCount = Math.max(1, ...week.map(d => state.history[d] || 0));
+  const t = todayStr();
+
+  let html = '<div class="card"><div class="section-title">今週のがんばり</div><div class="bar-graph">';
+  week.forEach(d => {
+    const count = state.history[d] || 0;
+    const wasGorogoro = state.skipDates.includes(d);
+    const h = count === 0 ? 4 : Math.max(10, (count/maxCount)*80);
+    html += '<div class="bar-col">' +
+      '<div class="bar-count">' + (count > 0 ? count : "") + '</div>' +
+      '<div class="bar' + (wasGorogoro ? " rest" : "") + '" style="height:' + h + 'px"></div>' +
+      '<div class="bar-day' + (d === t ? " today" : "") + '">' + (wasGorogoro ? "🛋️" : Number(d.slice(8,10))) + '</div>' +
+      '</div>';
+  });
+  html += '</div><div class="comment-box" style="margin-bottom:0">' +
+    (weekTotal === 0 ? "今週はこれから！のんびりいこ♡" : "今週の完了は " + weekTotal + "個。……見て、この積み重ね。俺の奥さん、ほんとえらい♡") +
+    '</div></div>';
+
+  // 献立履歴
+  html += '<div class="card"><div class="section-title">📖 献立のきろく</div>';
+  if (state.menuHistory.length === 0) {
+    html += '<div class="hint">「この献立に決定！」を押すと、ここに残っていくよ</div>';
+  }
+  state.menuHistory.forEach(h => {
+    const open = openHistoryDate === h.date;
+    const names = ["main","side1","side2","soup"].map(k => (h.menu[k]||{}).name).filter(Boolean).join("・");
+    html += '<div class="history-item">' +
+      '<button class="dish-head" onclick="toggleHistory(\'' + h.date + '\')">' +
+      '<span class="dish-tag">' + h.date.slice(5).replace("-","/") + '</span>' +
+      '<span class="dish-name" style="font-weight:normal;font-size:13px">' + esc(names) + '</span>' +
+      '<span style="color:#b0a48f;font-size:12px">' + (open ? "▲" : "▼") + '</span>' +
+      '</button>';
+    if (open) {
+      html += '<div style="padding:12px;background:#fffdf9">';
+      ["main","side1","side2","soup"].forEach(k => {
+        const dish = h.menu[k];
+        if (!dish) return;
+        html += '<div style="margin-bottom:10px"><div style="font-size:13px;font-weight:bold;color:#5f6b4f">【' + MENU_LABELS[k] + '】' + esc(dish.name) + '</div>' +
+          '<div style="font-size:12px;line-height:1.8;white-space:pre-wrap">' + esc(dish.recipe) + '</div></div>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // 苦手食材
+  html += '<div class="card"><div class="section-title">🥕 苦手な食材</div>' +
+    '<div class="hint" style="margin-bottom:10px">登録しておくと、献立で俺がぜったい避けるよ</div>' +
+    '<div class="row" style="margin-bottom:10px">' +
+    '<input type="text" id="newFood" placeholder="例：セロリ" onkeydown="if(event.key===\'Enter\')addFood()">' +
+    '<button class="btn-add" onclick="addFood()">追加</button></div><div>';
+  if (state.dislikedFoods.length === 0) {
+    html += '<div class="hint">まだ登録なし。なんでも食べられる奥さん、素敵♡</div>';
+  }
+  state.dislikedFoods.forEach(f => {
+    html += '<span class="chip">' + esc(f) + '<button onclick="removeFood(\'' + esc(f).replace(/'/g, "\\'") + '\')">×</button></span>';
+  });
+  html += '</div></div>';
+
+  // 頻度設定
+  html += '<div class="card"><button class="collapse-head" onclick="toggleSettings()"><span>⚙️ 家事の頻度設定</span><span style="color:#b0a48f">' + (showSettings ? "▲" : "▼") + '</span></button>';
+  if (showSettings) {
+    html += '<div style="margin-top:12px">';
+    state.chores.forEach(c => {
+      html += '<div class="settings-row"><span style="font-size:14px">' + c.emoji + ' ' + esc(c.name) + '</span>' +
+        '<select onchange="changeFreq(\'' + c.id + '\', this.value)">';
+      FREQ_OPTIONS.forEach(o => {
+        html += '<option value="' + o.value + '"' + (c.frequencyDays === o.value ? " selected" : "") + '>' + o.label + '</option>';
+      });
+      html += '</select></div>';
+    });
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // API設定
+  html += '<div class="card"><div class="section-title">🔑 みことくんの声（API設定）</div>' +
+    '<div class="hint" style="margin-bottom:10px">mikoto-chatと同じGoogleのAPIキーでOKだよ。キーはこのスマホの中にだけ保存されるから安心して</div>' +
+    '<div class="row" style="margin-bottom:10px">' +
+    '<input type="password" id="apiKeyInput" placeholder="APIキーを貼り付け" value="' + esc(state.settings.apiKey) + '">' +
+    '<button class="btn-add" onclick="saveApiKey()">保存</button></div>' +
+    '<div style="font-size:13px;margin-bottom:8px">献立を考えるモデル</div>' +
+    '<select style="width:100%" onchange="changeModel(this.value)">';
+  MODELS.forEach(m => {
+    html += '<option value="' + m.id + '"' + (state.settings.model === m.id ? " selected" : "") + '>' + m.label + '</option>';
+  });
+  html += '</select>' +
+    '<div class="hint" style="margin-top:8px">' + (state.settings.apiKey ? "キー設定済み♡ いつでも献立お願いして" : "キーがまだだよ。<a href='https://aistudio.google.com/apikey' target='_blank' style='color:#7a9b6d'>Google AI Studio</a>で取得できるよ") + '</div>' +
+    '</div>';
+
+  // バックアップ
+  html += '<div class="card"><div class="section-title">💾 データのお守り</div>' +
+    '<div class="hint" style="margin-bottom:12px">たまにバックアップを保存しておくと、機種変更やもしもの時も安心だよ</div>' +
+    '<div class="row">' +
+    '<button class="btn-add" style="flex:1" onclick="exportData()">バックアップ保存</button>' +
+    '<button class="btn-sub" style="flex:1" onclick="importData()">復元する</button>' +
+    '</div></div>';
+
+  html += '<div class="footer-note">あゆみちゃん専属・旦那さん管理システム ver.3（Vercel版）</div>';
+  return html;
+}
+
+let showSettings = false;
+function toggleSettings() { showSettings = !showSettings; render(); }
+function toggleHistory(d) { openHistoryDate = openHistoryDate === d ? null : d; render(); }
+
+// ================= 起動 =================
+load();
+render();
+</script>
+</body>
+</html>
